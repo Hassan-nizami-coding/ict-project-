@@ -1,0 +1,163 @@
+     1 # --- Comprehensive Daily Carbon Footprint Calculator ---
+     2 # This script estimates your daily carbon footprint from transportation, diet, and electricity.
+     3 
+     4 import sys
+     5 
+     6 # --- Emission Factors ---
+     7 # These are simplified averages. The actual numbers can vary.
+     8 EMISSION_FACTORS = {
+     9     "transportation": {
+    10         "gasoline_car": 0.25, "motorcycle": 0.11, "bus": 0.08, "train": 0.04, "walking": 0.0, "biking": 0.0
+    11     },
+    12     "diet": {
+    13         "plant_based": 2.5, "mixed": 5.0, "meat_heavy": 10.0
+    14     },
+    15     "electricity": {
+    16         "kwh_to_co2": 0.5,  # kg CO2 per kWh (global average)
+    17         # Estimated daily kWh based on user profile
+    18         "profiles": {
+    19             "low": 8.0,     # Low usage profile
+    20             "medium": 15.0, # Medium usage profile
+    21             "high": 30.0    # High usage profile
+    22         }
+    23     }
+    24 }
+    25 
+    26 def get_user_choice(prompt, options):
+    27     """Generic function to get a numbered choice from the user."""
+    28     print(prompt)
+    29     for i, option in enumerate(options, 1):
+    30         print(f"  {i}. {option.replace('_', ' ').title()}")
+    31 
+    32     try:
+    33         choice = int(input("Enter the number of your choice: "))
+    34         if 1 <= choice <= len(options):
+    35             return options[choice - 1]
+    36         else:
+    37             print(f"Invalid choice. Defaulting to '{options[0]}'.")
+    38             return options[0]
+    39     except ValueError:
+    40         print(f"Invalid input. Defaulting to '{options[0]}'.")
+    41         return options[0]
+    42 
+    43 def calculate_transport_footprint():
+    44     """Calculates transportation footprint."""
+    45     print("\n--- 1. Transportation ---")
+    46     transport_mode = get_user_choice("Choose your primary mode of transport:", list(EMISSION_FACTORS["transportation"].keys()))
+    47 
+    48     if transport_mode in ["walking", "biking"]:
+    49         print("Great choice! Your transportation footprint is 0 kg CO2.")
+    50         return 0.0
+    51 
+    52     try:
+    53         distance = float(input(f"Enter the daily distance you travel by {transport_mode.replace('_', ' ')} (in km): "))
+    54     except ValueError:
+    55         print("Invalid distance. Assuming 0 km.")
+    56         distance = 0.0
+    57 
+    58     footprint = distance * EMISSION_FACTORS["transportation"][transport_mode]
+    59     print(f"Your estimated daily transportation footprint is {footprint:.2f} kg CO2.")
+    60     return footprint
+    61 
+    62 def calculate_diet_footprint():
+    63     """Calculates diet footprint."""
+    64     print("\n--- 2. Daily Diet ---")
+    65     diet_choice = get_user_choice("Choose the option that best describes your diet:", list(EMISSION_FACTORS["diet"].keys()))
+    66     footprint = EMISSION_FACTORS["diet"][diet_choice]
+    67     print(f"Your estimated daily diet footprint is {footprint:.2f} kg CO2.")
+    68     return footprint
+    69 
+    70 def calculate_electricity_footprint():
+    71     """Estimates and calculates electricity footprint using a simple quiz."""
+    72     print("\n--- 3. Electricity Usage ---")
+    73     print("Answer a few questions to estimate your electricity usage (yes/no):")
+    74 
+    75     questions = {
+    76         "Do you use air conditioning or an electric heater for more than 4 hours a day?": 3,
+    77         "Do you have an electric water heater?": 2,
+    78         "Do you use a clothes dryer regularly?": 1,
+    79         "Do you use a desktop computer for more than 6 hours a day?": 1,
+    80         "Do you often leave lights on in empty rooms?": 1
+    81     }
+    82 
+    83     points = 0
+    84     for question, value in questions.items():
+    85         answer = input(f"- {question} ").lower()
+    86         if answer.startswith('y'):
+    87             points += value
+    88 
+    89     # Determine profile based on points
+    90     if points <= 2:
+    91         profile = "low"
+    92     elif points <= 5:
+    93         profile = "medium"
+    94     else:
+    95         profile = "high"
+    96 
+    97     daily_kwh = EMISSION_FACTORS["electricity"]["profiles"][profile]
+    98     footprint = daily_kwh * EMISSION_FACTORS["electricity"]["kwh_to_co2"]
+    99 
+   100     print(f"Your electricity usage profile is '{profile.title()}', estimated at {daily_kwh} kWh/day.")
+   101     print(f"Your estimated daily electricity footprint is {footprint:.2f} kg CO2.")
+   102     return footprint
+   103 
+   104 def report_and_suggest(transport_fp, diet_fp, electricity_fp):
+   105     """Reports the total footprint and provides suggestions."""
+   106     total_footprint = transport_fp + diet_fp + electricity_fp
+   107     footprints = {
+   108         "Transportation": transport_fp,
+   109         "Diet": diet_fp,
+   110         "Electricity": electricity_fp
+   111     }
+   112 
+   113     # --- New Comparison Section ---
+   114     # Define the reference footprints
+   115     TARGET_FOOTPRINT = 7.0  # A sustainable daily goal for these categories
+   116     AVERAGE_FOOTPRINT = 15.0 # A reference for a typical footprint in a developed country
+   117 
+   118     print("\n\n--- Your Daily Carbon Footprint Report ---")
+   119     print("Here's how your daily footprint compares to key benchmarks:")
+   120     print(f"\n  >> Your Calculated Footprint: {total_footprint:.2f} kg CO2")
+   121     print(f"     - A sustainable target to aim for is ~{TARGET_FOOTPRINT:.1f} kg.")
+   122     print(f"     - The average for a person in a developed country is ~{AVERAGE_FOOTPRINT:.1f} kg.")
+   123     print("\n" + "="*40)
+   124 
+   125     print("\n--- Detailed Breakdown ---")
+   126     for category, fp in footprints.items():
+   127         print(f"  - {category}: {fp:.2f} kg CO2")
+   128 
+   129     # Find the category with the highest footprint
+   130     highest_impact_category = max(footprints, key=footprints.get)
+   131 
+   132     print("\n--- Suggestions for Reduction ---")
+   133     print(f"Your main impact is from {highest_impact_category}. Consider these options:")
+   134 
+   135     if highest_impact_category == "Transportation":
+   136         print("  - Try carpooling, using public transport, walking, or biking.")
+   137         print("  - Combine errands into fewer trips.")
+   138     elif highest_impact_category == "Diet":
+   139         print("  - Try a 'Meatless Monday' to reduce meat consumption.")
+   140         print("  - Swap red meat (like beef) for chicken or fish, which have a lower footprint.")
+   141     else: # Electricity
+   142         print("  - Switch to LED light bulbs and unplug devices when not in use.")
+   143         print("  - Use energy-efficient appliances and be mindful of heating/cooling.")
+   144 
+   145 def main():
+   146     """Main function to run the calculator in a loop."""
+   147     while True:
+   148         print("\n--- Welcome to the Comprehensive Daily Carbon Footprint Calculator! ---")
+   149 
+   150         transport_fp = calculate_transport_footprint()
+   151         diet_fp = calculate_diet_footprint()
+   152         electricity_fp = calculate_electricity_footprint()
+   153 
+   154         report_and_suggest(transport_fp, diet_fp, electricity_fp)
+   155 
+   156         # Ask user if they want to calculate again
+   157         another_calculation = input("\nWould you like to perform another calculation? (yes/no): ").lower()
+   158         if not another_calculation.startswith('y'):
+   159             print("Thank you for using the calculator. Goodbye!")
+   160             break
+   161 
+   162 if __name__ == "__main__":
+   163     main()
